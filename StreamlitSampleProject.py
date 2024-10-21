@@ -1,3 +1,4 @@
+from __future__ import division
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,7 +23,6 @@ from sklearn.metrics import mean_absolute_error
 import joblib
 
 ## label encoding on dataset
-
 
 # Caching expensive operations
 @st.cache_resource
@@ -80,7 +80,6 @@ def clean_dataset(data):
 label_encoder = preprocessing.LabelEncoder()
 
 
-
 # Sidebar for file uploads
 st.sidebar.title("Upload Dataset(s)")
 uploaded_files = st.sidebar.file_uploader("Choose one or more CSV files", type="csv", accept_multiple_files=True)
@@ -120,7 +119,7 @@ if uploaded_files:
     # Step 1: Display a sample of the selected dataset
     st.write("## Step 1: Reading the dataset")
 
-    st.write("#### Firstly, we read the raw and uncleaned data to see what we're dealing with. We do this with the 'pd.read_csv' function.")
+    st.write("Firstly, we read the raw and uncleaned data to see what we're dealing with. We do this with the 'pd.read_csv' function.")
 
     st.dataframe(data_cleaned, use_container_width=True)
 
@@ -145,6 +144,8 @@ if uploaded_files:
 
     # Step 1: Display a sample of the selected dataset
     st.write("## Cleaned Data for Visualization")
+
+    st.write(" Here we've given each categorical variables an ID and grouped them so we can treat them as continuous. We removed the percentage sign from 'sale' so we can convert them into integers and treat them as continuous as well. We also logged each 'price' instance to scale them down. We created this data to make it easier to visualise. ")
 
     st.dataframe(visual_data, use_container_width=True)
 
@@ -178,12 +179,16 @@ if uploaded_files:
     # Step 3 - Visualizing the Target Variable
     st.write("## Step 3: Visualizing the Target Variable")
 
+    st.write("Here we can see how our target variable (price) is distributed with a histogram. The bell curve signifies a normal distribution which means it is good for analysis.")
+
     fig, ax = plt.subplots()
     ax.hist(visual_data[target], bins=30, edgecolor='k', alpha=0.7)
     ax.set_title(f"Distribution of {target}")
     ax.set_xlabel(target)
     ax.set_ylabel('Frequency')
     st.pyplot(fig)
+
+    st.write("This is a graph of scatter plots. Our program went through each column in the dataset and compared it to each other column through a scatter plot. A total of 7 variables gives us 49 plots.")
 
     # Plot a pairplot of all numeric columns in the dataset
     numeric_cols1 = visual_data.select_dtypes(include=['float64', 'int64']).columns
@@ -194,12 +199,15 @@ if uploaded_files:
         st.write("Not enough numeric variables to plot a pairplot.")
         
     st.write("## Identified and removed unwanted columns: 'url'")
+    st.write("Our lives will be made easier if we filter through the data and find any variables that would not be relevant for analysis. In this case, we've found 'url' to be an irrelevant column to our analysis. Because of this, we removed it from the data.")
     data_cleaned = data_cleaned.drop('url', axis=1)
     visual_data = visual_data.drop('url', axis=1)
     st.dataframe(data_cleaned, use_container_width=True)
 
     # Step 4: Basic Data Exploration
     st.write("## Step 4: Data Exploration")
+
+    st.write("Here we've summarised the types in the data. We can see which variables will be categorical (string) and which variables will be continuous (numerical). You can also see summaries regarding count, mean, standard deviation, minimum, maximum, and percentiles of each continuous variable.")
 
     # Create two columns for data types and summary statistics
     col1, col2 = st.columns(2)
@@ -221,7 +229,9 @@ if uploaded_files:
     # Step 5: Visual EDA - Histograms for Continuous Variables
     st.write("## Step 5: Visual EDA - Histograms of Continuous Variables / Bar Plots of Categorical Variables")
 
-    continuous_columns = st.multiselect("Select continuous variables to visualize:",
+    st.write("Here we have the opportunity to visualize our variables independently. Continuous (numerical) variables will be visualized using a histogram. Categorical (string) variables are visualized using bar plots.")
+
+    continuous_columns = st.multiselect("Select continuous variables to visualize with histograms:",
                                         visual_data.select_dtypes(include=['float64', 'int64']).columns)
 
     if continuous_columns:
@@ -236,13 +246,14 @@ if uploaded_files:
             # Display the individual figure
             st.pyplot(fig)
 
+    st.write("Variable analysis: rate, sale, delivery, price.")
+
     # categorical_columns = st.multiselect("Select categorical variables to visualize:",
     #                                     data_cleaned.select_dtypes(include=['string']).columns)
 
     # 2. Visualizing Categorical Variables using Bar Plots
     # Identify categorical columns (i.e., columns with object data types)
     categorical_columns = visual_data.select_dtypes(include=['float64', 'int64']).columns
-
 
     # If categorical columns are available
     if len(categorical_columns) > 0:
@@ -265,9 +276,15 @@ if uploaded_files:
             st.pyplot(fig)
     else:
         st.write("No categorical variables available for bar plot visualization.")
+
+    st.write("Variable analysis: furniture, type.")
         
         # Step 6: Outlier Analysis
     st.write("## Step 6: Outlier Analysis")
+
+    st.write("Here we identify the outliers in each column. A piece of data is deemed an outlier if is in the bottom 25% quantile or top 25% quantile. We have only done this for our numeric columns as we can't identify outliers in categorical variables.")
+    st.write("You'll notice that we haven't performed an outlier analysis on our 'rate' variable. If you go back to our previous step and look at the histogram for 'rate', you'll find that there are over 1500 instances of 0 rate.")
+    st.write("While all other rate instances (1, 2, 3, 4, and 5) do not even break 250. Therefore, if we perform an outlier analysis on 'rate', we will only have 0's, which is not necessary for further data analysis.")
 
     data_cleaned['sale'] = data_cleaned['sale'].str.replace('%', '').astype(float)
     wRate = data_cleaned.copy()
@@ -302,6 +319,9 @@ if uploaded_files:
 
     # Step 7: Missing Value Analysis
     st.write("## Step 7: Missing Value Analysis")
+
+    st.write("In this step, we've identified each index that is null or in other words, has no value. Part of the cleaning process is to identify all these missing values, as further data analysis on null values may cause errors and inconsistencies.")
+
     missing_values = data_cleaned.isnull().sum()
     st.write("### Missing Values in Each Column")
     dtype_df_missing_values = pd.DataFrame(missing_values, columns=["Missing Values"]).reset_index()
@@ -310,6 +330,8 @@ if uploaded_files:
 
     st.write("## Dataset after removing outliers and replacing missing values with 0")
 
+    st.write("Now that we've identified our outliers and missing values, we can clean the data to prepare it for prediction modelling. The first step is to remove each row that has an outlier in any of the numerical columns.")
+    st.write("The second step is to replace each missing value with 0, to ensure that no errors occur in our further analysis. Attempting to perform functions on null values may prevent the program from continuing.")
 
     final_data = data_cleaned[~((data_cleaned[numeric_cols.columns] < lower_bound) | (data_cleaned[numeric_cols.columns] > upper_bound)).any(axis=1)]
     # filtered_df = data_cleaned[~(data_cleaned[numeric_cols.columns] < lower_bound) | (data_cleaned[numeric_cols.columns] > upper_bound)]
@@ -321,8 +343,8 @@ if uploaded_files:
     # Step 8: Feature Selection - Correlation Analysis
     st.write("## Step 8: Feature Selection - Correlation Matrix")
 
-    selected_features = st.multiselect("Select predictor variables (independent variables):",
-                                    visual_data.select_dtypes(include=['float64', 'int64']).columns)
+    st.write("Here we will analyze the statistical correlation between each variable. Below is a heat map that shows the correlation between all of our furniture variables, including our categorical variables. ")
+    st.write("By using the 'corr' function, we can find the specific correlation values that show how strong each correlation is. 1 is the highest correlation while -0.2 is the lowest. As you can see, the majority of our correlations are in the -0.2 to 0.2 range, meaning there is little correlation throughout our data.")
 
     # cleaned_columns = ['price','rate','delivery']
     # selected_features = st.selectbox("Select the predictor variable (independent variables):", [column for column in data_cleaned.columns if column in cleaned_columns])
@@ -338,6 +360,9 @@ if uploaded_files:
         fig, ax = plt.subplots(figsize=(10, 6))
         sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
+
+        selected_features = st.multiselect("Select predictor variables (independent variables):",
+        visual_data.select_dtypes(include=['float64', 'int64']).columns)
         
         # if target == 'price' or target == 'rate' or target == 'delivery':
         # #convert the data frame into series 
@@ -368,11 +393,11 @@ if uploaded_files:
             # list1 = new_visual[f'{target}']
             # list2 = new_visual[f'{selected_features}']
             
-            corrDataFrame = pd.DataFrame(final_data[target])
+            corrDataFrame = pd.DataFrame(new_visual[target])
             
             x = 1
             for i in selected_features:
-                corrDataFrame.insert(x, f"{i}", final_data[i], True)
+                corrDataFrame.insert(x, f"{i}", new_visual[i], True)
                 x = x + 1
                 
             # corr, p_value = pearsonr(list1, list2)
@@ -449,13 +474,10 @@ if uploaded_files:
                 
                 # anova_groups[f'{cat_col}'] = final_data.groupby(cat_col)[target].transform(np.mean)
                 
-                st.dataframe(anova_groups)
-               
                 f_val, p_val = stats.f_oneway(*anova_groups)
     
                 # Append the results to a list
                 anova_results.append({"Categorical Variable": cat_col, "F-value": f_val, "p-value": p_val})
- 
 
             # Convert results to DataFrame
             anova_df = pd.DataFrame(anova_results)
@@ -476,8 +498,9 @@ if uploaded_files:
                 # Visualize the relationship using box plots
                 st.write("### Box Plot: Categorical Variable vs Target")
                 for cat_col in selected_categorical:
+                    
                     fig, ax = plt.subplots(figsize=(10, 6))
-                    sns.boxplot(x=cat_col, y=target, data=final_data, ax=ax)
+                    sns.boxplot(x=cat_col, y=target, data=new_visual, ax=ax)
                     ax.set_title(f"{cat_col} vs {target}")
                     st.pyplot(fig)
             else:
