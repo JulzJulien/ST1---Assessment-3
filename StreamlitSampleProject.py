@@ -97,13 +97,12 @@ if uploaded_files:
 
     # Select the dataset to proceed with
     data = datasets[selected_file]
-    data = pd.read_csv('FurniturePricePrediction.csv')
-  
 
     # Clean the dataset (convert object columns to numeric or datetime)
     data_cleaned = clean_dataset(data)
 
-    visual_data = pd.read_csv('FurniturePricePrediction.csv').drop_duplicates()
+    visual_data = data_cleaned.copy()
+    visual_data = visual_data.drop_duplicates()
 
     visual_data['furniture'] = label_encoder.fit_transform(visual_data['furniture'])
     visual_data['type'] = label_encoder.fit_transform(visual_data['type'])
@@ -197,6 +196,8 @@ if uploaded_files:
         st.pyplot(plt.gcf())
     else:
         st.write("Not enough numeric variables to plot a pairplot.")
+
+    st.write("You'll notice an exponential growth on the delivery-price plots. As the price approachs 55, delivery begins an exponential growth, skyrocketing when price hits approximately 400. This indicates an exponential relationship between the two, which may be explained by the fact that larger pieces of furniture require larger delivery trucks, and thus increasing the delivery fee.")
         
     st.write("## Identified and removed unwanted columns: 'url'")
     st.write("Our lives will be made easier if we filter through the data and find any variables that would not be relevant for analysis. In this case, we've found 'url' to be an irrelevant column to our analysis. Because of this, we removed it from the data.")
@@ -206,6 +207,8 @@ if uploaded_files:
 
     # Step 4: Basic Data Exploration
     st.write("## Step 4: Data Exploration")
+
+    data_cleaned['sale'] = data_cleaned['sale'].str.replace('%', '').astype(float)
 
     st.write("Here we've summarised the types in the data. We can see which variables will be categorical (string) and which variables will be continuous (numerical). You can also see summaries regarding count, mean, standard deviation, minimum, maximum, and percentiles of each continuous variable.")
 
@@ -247,7 +250,9 @@ if uploaded_files:
             st.pyplot(fig)
 
     st.write("Variable analysis: rate, sale, delivery, price.")
-
+    st.write("The 'rate' histogram shows a large frequency of 0, reaching over 1500 occurences. Every other rating (1, 2, 3, 4, 5) doesn't break 250. This shows us that the overwhelming majority of our furniure items haven't been rated at all.")
+    st.write("The 'sale' historgram shows a slight increase at each increment of 20. This shows us that these furniture prices are often discounted in increments of 20.")
+    st.write("You'll notice in our dataset that in 'delivery', there are many occurences of 172 and 52. These is why we have to abnormally large columns in the 'delivery' histogram, indicating that these furniture prices may have two default delivery fees, and only adjusting on special occasions.")
     # categorical_columns = st.multiselect("Select categorical variables to visualize:",
     #                                     data_cleaned.select_dtypes(include=['string']).columns)
 
@@ -278,15 +283,16 @@ if uploaded_files:
         st.write("No categorical variables available for bar plot visualization.")
 
     st.write("Variable analysis: furniture, type.")
+    st.write("In our 'type' bar plot, we can see an obvious outlier in the middle of the graph. There is one type of furniture that has over 600 occurences in our dataset, while every other type barely breaks 100. Looking back on our dataset, we can see that this type of furniture is 'Modern Home'. This graph shows us that this 'Modern Home' type must be the most common and popular type of furniture, and may also be used as a more generalised type compared to other specialised types.")
         
-        # Step 6: Outlier Analysis
+    # Step 6: Outlier Analysis
     st.write("## Step 6: Outlier Analysis")
 
     st.write("Here we identify the outliers in each column. A piece of data is deemed an outlier if is in the bottom 25% quantile or top 25% quantile. We have only done this for our numeric columns as we can't identify outliers in categorical variables.")
     st.write("You'll notice that we haven't performed an outlier analysis on our 'rate' variable. If you go back to our previous step and look at the histogram for 'rate', you'll find that there are over 1500 instances of 0 rate.")
     st.write("While all other rate instances (1, 2, 3, 4, and 5) do not even break 250. Therefore, if we perform an outlier analysis on 'rate', we will only have 0's, which is not necessary for further data analysis.")
 
-    data_cleaned['sale'] = data_cleaned['sale'].str.replace('%', '').astype(float)
+
     wRate = data_cleaned.copy()
 
     # Select only continuous numerical columns
@@ -404,8 +410,12 @@ if uploaded_files:
             # st.write(f"Pearson's correlation value: {corr:.3f}    probability value: {p_value}")
             
             st.write("## Pearson's Correlation Matrix: Target Variable vs. Predictor Variable(s)")
+        
+            st.write("Pearson's correlation is an effective correlation formula that takes in an x variable, a y variable, and the means of both variables and outputs correlation coefficient. Pearson's correlation is most effective when analyzing linear data. Because the majority of our data has a weak correlation (and is not linear), the Pearson's correlation coefficient will most often be in the 0-0.3 range, which is considered weak. ")
             
             st.dataframe(corrDataFrame.corr(method='pearson', min_periods=1), use_container_width=True)
+
+            st.write("Here we can see a scatter chart that plots the correlation between our target variable (price) and our selected predictor variable.")
 
             st.scatter_chart(new_visual, x = target, y = selected_features)
 
@@ -484,6 +494,13 @@ if uploaded_files:
 
             # Display the ANOVA results
             st.write("### ANOVA Results")
+            
+            st.write("ANOVA stands for analysis of variance testing, and is test used to find the difference between the means of multiple groups of data. ANOVA finds the variance of each array and compares each one to the variance of the means.")
+
+            st.write("The F-value is simply the ratio of the variance between each group and the variance within each group. All the F-value indicates is how different each set of data is from each other. For example, a higher F-value signifies a big difference between the sets of data. A low F-value signifies a small diffference between the sets of data. If our F-value is greater than 2.5, then we can reject the null hypothesis, meaning there is a significant difference between our sets of data.")
+
+            st.write("The P-value simply tells us the probability that our data occurred in the null hypothesis. This means that a low P-value (less than 0.05), indicates that we can reject the null hypothesis.")
+
             st.write("The following table shows F-values and P-values for each categorical variable.")
             st.dataframe(anova_df, use_container_width=True)
 
@@ -497,6 +514,9 @@ if uploaded_files:
                     st.write("No significant variables found.")
                 # Visualize the relationship using box plots
                 st.write("### Box Plot: Categorical Variable vs Target")
+
+                st.write("Here we chart our comparison of our categorical variable and our target variable using a box plot. Each box shows the minimum and maximum of each range with lines outside of the box. The area of the box itself shows the interquartile range (the range between the lower and upper quartile). A circle on the plot indicates a range of data that is more than 1.5 times the interquartile range, meaning it is an outlier.")
+
                 for cat_col in selected_categorical:
                     
                     fig, ax = plt.subplots(figsize=(10, 6))
@@ -513,6 +533,12 @@ if uploaded_files:
 
     # Step 10: Selecting Final Predictors for Building Machine Learning Model
     st.write("## Step 10: Selecting Final Predictors")
+
+    final_data['furniture'] = label_encoder.fit_transform(final_data['furniture'])
+    final_data['type'] = label_encoder.fit_transform(final_data['type'])
+
+    st.write("In Step 8, we selected predictor variables. These are going to be the variables we use for our prediction model. We input example instances into these predictor variables, and our prediction model will create a target variable (price) prediction based on those inputs.")
+
     # Ensure that numeric columns are selected
     st.write("### Selected Features:", selected_features)
 
@@ -522,9 +548,12 @@ if uploaded_files:
 
         # Step 11: Data Preparation for Machine Learning
         st.write("## Step 11: Data Preparation for Machine Learning")
+
+        st.write("Here we can select the ratio between our train data and our test data. Our train data will be used to train the AI model for its prediction process. Our test data will be used to test the algorithm after its been trained, to make sure its working properly. The ideal ratio is 20-30% for testing and 70-80% for training.")
+
         # Extracting the features and target variable
-        X = new_visual[selected_features]
-        y = new_visual[target]
+        X = final_data[selected_features]
+        y = final_data[target]
 
         # Splitting the data into train and test sets
         test_size = st.slider("Select the test size (percentage)", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
@@ -536,6 +565,10 @@ if uploaded_files:
 
         # Step 12: Model Training and Evaluation
         st.write("## Step 12: Model Training and Evaluation")
+
+        st.write("In this step, the program takes in all the data we've inputted so far, and determines the best prediction model to use for our final output. The program compares Linear Regression, Decision Tree Regressor, Random  Forest Regressor, KNN Regressor, and SVM Regressor.")
+        st.write("This Model Performance Table charts the MSE (Mean Squared Error), R2 Score (R-Squared), and MAE (Mean Absolute Error) of each potential prediction model. The MSE is the average squared difference between the value observed and the and the value predicted. The R2 score tells us the amount of variance of our target variable that is explained by our predictor variables. The MAE is simply the average size of mistakes the program has made in its data processing.")
+
         # Check if models are already cached, otherwise train and cache them
         if 'trained_models' not in st.session_state:
             st.session_state.trained_models = train_models(X_train_scaled, y_train)
@@ -606,6 +639,7 @@ if uploaded_files:
 
         # Step 13: Selecting the Best Model
         st.write("## Step 13: Selecting the Best Model")
+        st.write("The program determines what the best prediction model for our dataset and our selected variables is. The program finds the prediction model that produced the lowest MSE (Mean Squared Error) and selects it for prediction modelling.")
 
         # Check if model performance dictionary has been populated
         if model_performance:
@@ -615,6 +649,7 @@ if uploaded_files:
 
             # Step 14: Retraining the Best Model on Entire Data
             st.write("## Step 14: Retraining the Best Model")
+            st.write("Step 14 involves retraining the model and reprocessing data to prepare for data prediction. The program does this with the 'fit_transform' function, which combines the 'fit' function and the 'transform' function from the 'sklearn' package. The 'fit' function calculates the various required parameters and the 'transform' function applies these parameters to our data.")
             best_model = trained_models[best_model_mse]
             # Retrain the best model on the entire dataset
             # Combine and scale the entire dataset
